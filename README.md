@@ -93,9 +93,7 @@ DB_PORT=5432
 
 ## 🛠️ Inicializar Backend (Django REST Framework)
 
-**⚠️ IMPORTANTE:** Este paso debe ejecutarse ANTES de levantar los servicios con `docker compose up -d`
-
-**⚠️ RECOMENDACION:** Constriccion de las imagenes de los contenedores con `docker compose build`
+**⚠️ IMPORTANTE:** Constriccion de las imagenes de los contenedores con `docker compose build`
 
 ### Paso 1: Crear Proyecto Django
 
