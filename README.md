@@ -201,7 +201,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://backend:8080',
+        target: 'http://nginx:8888',
         changeOrigin: true,
       },
     },

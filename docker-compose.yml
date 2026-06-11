@@ -20,7 +20,7 @@ services:
     volumes:
       - ./backend:/code
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
     environment:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
@@ -36,16 +36,16 @@ services:
     volumes:
       - ./frontend:/src
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
     working_dir: /src
     command: 'npm run dev'
     environment:
-      - VITE_API_URL=http://localhost:8888/api
+      - VITE_API_URL=http://localhost:${NGINX_PORT}/api
 
   nginx:
     build: ./nginx
     ports:
-      - "8888:8888"
+      - "${NGINX_PORT}:${NGINX_PORT}"
     depends_on:
       - backend
       - frontend
