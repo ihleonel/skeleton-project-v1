@@ -2,9 +2,8 @@ FROM node:25.9.0-alpine3.23
 
 WORKDIR /src
 
-RUN mkdir -p /src/node_modules && \
-    chown -R node:node /src
-
+# Cambiar a usuario node para mayor seguridad
 USER node
 
+# No establecer CMD - permitir que docker-compose o el usuario ejecute comandos manualmente
 CMD ["sh"]

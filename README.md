@@ -146,8 +146,8 @@ CORS_ALLOWED_ORIGINS = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'finance_db'),
-        'USER': os.getenv('DB_USER', 'finance_user'),
+        'NAME': os.getenv('DB_NAME', 'db_name'),
+        'USER': os.getenv('DB_USER', 'db_user'),
         'PASSWORD': os.getenv('DB_PASSWORD', 'finance_secure_password'),
         'HOST': os.getenv('DB_HOST', 'db'),
         'PORT': os.getenv('DB_PORT', '5432'),
