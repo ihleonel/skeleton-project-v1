@@ -13,7 +13,7 @@ skeleton-project-v1/
 ├── frontend/                 # Aplicación frontend (Node.js)
 │   ├── Dockerfile           # Configuración de Docker para frontend
 │   └── ... (código Node.js/React)
-├── docker-compose.yml       # Orquestación de servicios
+├── docker compose.yml       # Orquestación de servicios
 ├── .env.example             # Variables de entorno de ejemplo
 ├── .gitignore               # Archivos ignorados por Git
 └── README.md                # Este archivo
@@ -53,7 +53,7 @@ Asegúrate de tener instalado:
 Verifica la instalación:
 ```bash
 docker --version
-docker-compose --version
+docker compose --version
 ```
 
 ## ⚙️ Configuración Inicial
@@ -93,7 +93,7 @@ DB_PORT=5432
 
 ## 🛠️ Inicializar Backend (Django REST Framework)
 
-**⚠️ IMPORTANTE:** Este paso debe ejecutarse ANTES de levantar los servicios con `docker-compose up -d`
+**⚠️ IMPORTANTE:** Este paso debe ejecutarse ANTES de levantar los servicios con `docker compose up -d`
 
 ### Paso 1: Crear Proyecto Django
 
@@ -101,7 +101,7 @@ Si el directorio `backend/` está vacío, necesitas crear un nuevo proyecto Djan
 
 ```bash
 # Crear proyecto Django dentro del contenedor
-docker-compose run --rm backend django-admin startproject config .
+docker compose run --rm backend django-admin startproject config .
 ```
 
 Este comando crea:
@@ -229,10 +229,10 @@ backend/
 
 ```bash
 # Crear una app dentro del contenedor (ej: usuarios)
-docker-compose run --rm backend python manage.py startapp users apps/users
+docker compose run --rm backend python manage.py startapp users apps/users
 
 # O para otra app
-docker-compose run --rm backend python manage.py startapp products apps/products
+docker compose run --rm backend python manage.py startapp products apps/products
 ```
 
 ### Ejemplo: Crear API REST Simple
@@ -300,7 +300,7 @@ urlpatterns = [
 
 ## 🎨 Inicializar Frontend (Vite)
 
-**⚠️ IMPORTANTE:** Este paso debe ejecutarse ANTES de levantar los servicios con `docker-compose up -d`
+**⚠️ IMPORTANTE:** Este paso debe ejecutarse ANTES de levantar los servicios con `docker compose up -d`
 
 ### Paso 1: Crear Proyecto Vite
 
@@ -308,7 +308,7 @@ Si el directorio `frontend/src` está vacío, crear un nuevo proyecto Vite:
 
 ```bash
 # Crear proyecto Vite interactivo dentro del contenedor
-docker-compose run --rm frontend npm create vite@latest . -- --template react
+docker compose run --rm frontend npm create vite@latest . -- --template react
 ```
 
 **Opciones de template disponibles:**
@@ -324,10 +324,10 @@ docker-compose run --rm frontend npm create vite@latest . -- --template react
 
 ```bash
 # Instalar todas las dependencias
-docker-compose exec frontend npm install
+docker compose exec frontend npm install
 
 # Instalar paquetes adicionales
-docker-compose exec frontend npm install axios react-router-dom
+docker compose exec frontend npm install axios react-router-dom
 ```
 
 ### Paso 3: Estructura Recomendada de Proyecto
@@ -486,32 +486,32 @@ Ahora que has inicializado Backend y Frontend, puedes levantar todos los servici
 
 ```bash
 # Levantar todos los servicios
-docker-compose up -d
+docker compose up -d
 
 # Ver logs en tiempo real
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ### Paso 2: Reconstruir Imágenes (después de cambios)
 
 ```bash
 # Reconstruir y levantar
-docker-compose up -d --build
+docker compose up -d --build
 
 # Sin cache
-docker-compose build --no-cache && docker-compose up -d
+docker compose build --no-cache && docker compose up -d
 ```
 
 ### Paso 3: Verificar Estado
 
 ```bash
 # Ver estado de todos los contenedores
-docker-compose ps
+docker compose ps
 
 # Ver logs de un servicio específico
-docker-compose logs -f backend    # Backend (Django)
-docker-compose logs -f frontend   # Frontend (Node.js)
-docker-compose logs -f db         # Base de datos
+docker compose logs -f backend    # Backend (Django)
+docker compose logs -f frontend   # Frontend (Node.js)
+docker compose logs -f db         # Base de datos
 ```
 
 **Tiempo de inicio:** 30-60 segundos aproximadamente para que todos los servicios estén listos.
@@ -524,10 +524,10 @@ Una vez que los servicios estén levantados, ejecuta estos comandos para complet
 
 ```bash
 # Ejecutar migraciones de Django
-docker-compose exec backend python manage.py migrate
+docker compose exec backend python manage.py migrate
 
 # Crear superusuario (admin)
-docker-compose exec backend python manage.py createsuperuser
+docker compose exec backend python manage.py createsuperuser
 # Ingresa: usuario, email, contraseña
 ```
 
@@ -535,10 +535,10 @@ docker-compose exec backend python manage.py createsuperuser
 
 ```bash
 # Crear migración para los modelos
-docker-compose exec backend python manage.py makemigrations
+docker compose exec backend python manage.py makemigrations
 
 # Ejecutar las nuevas migraciones
-docker-compose exec backend python manage.py migrate
+docker compose exec backend python manage.py migrate
 ```
 
 ## 📱 Acceder a los Servicios
@@ -558,7 +558,7 @@ Una vez completada la configuración, accede a través de:
 2. ✅ **Configurar variables de entorno** - Crear archivo `.env`
 3. ✅ **Inicializar Backend** - Crear proyecto Django y configurar
 4. ✅ **Inicializar Frontend** - Crear proyecto Vite e instalar dependencias
-5. ✅ **Levantar servicios** - `docker-compose up -d`
+5. ✅ **Levantar servicios** - `docker compose up -d`
 6. ✅ **Ejecutar migraciones** - Preparar la base de datos
 7. ✅ **Crear superusuario** - Acceso al panel admin
 8. ✅ **Acceder a las aplicaciones** - Frontend y API listos
@@ -569,62 +569,62 @@ Una vez completada la configuración, accede a través de:
 
 ```bash
 # Detener todos los servicios
-docker-compose down
+docker compose down
 
 # Detener y eliminar volúmenes (⚠️ borra datos)
-docker-compose down -v
+docker compose down -v
 
 # Reiniciar un servicio
-docker-compose restart backend
+docker compose restart backend
 
 # Ver logs en vivo
-docker-compose logs -f
+docker compose logs -f
 
 # Ejecutar comando en un contenedor
-docker-compose exec backend python manage.py migrate
-docker-compose exec frontend npm list
+docker compose exec backend python manage.py migrate
+docker compose exec frontend npm list
 ```
 
 ### Migraciones de Base de Datos
 
 ```bash
 # Ejecutar migraciones de Django
-docker-compose exec backend python manage.py migrate
+docker compose exec backend python manage.py migrate
 
 # Crear superusuario
-docker-compose exec backend python manage.py createsuperuser
+docker compose exec backend python manage.py createsuperuser
 
 # Crear nueva migración
-docker-compose exec backend python manage.py makemigrations
+docker compose exec backend python manage.py makemigrations
 ```
 
 ### Gestión del Frontend
 
 ```bash
 # Instalar nuevas dependencias
-docker-compose exec frontend npm install <nombre-paquete>
+docker compose exec frontend npm install <nombre-paquete>
 
 # Ejecutar scripts personalizados
-docker-compose exec frontend npm run build
+docker compose exec frontend npm run build
 ```
 
 ### Testing en Backend
 
 ```bash
 # Ejecutar todos los tests
-docker-compose exec backend python -m unittest discover -s tests
+docker compose exec backend python -m unittest discover -s tests
 
 # Ejecutar tests de un módulo específico
-docker-compose exec backend python -m unittest tests.users
+docker compose exec backend python -m unittest tests.users
 
 # Ejecutar tests con output verboso
-docker-compose exec backend python -m unittest discover -s tests -v
+docker compose exec backend python -m unittest discover -s tests -v
 
 # Ejecutar un archivo de tests específico
-docker-compose exec backend python -m unittest tests.users.test_entities
+docker compose exec backend python -m unittest tests.users.test_entities
 
 # Ejecutar un test case específico
-docker-compose exec backend python -m unittest tests.users.test_entities.UserEntityTest.test_user_creation
+docker compose exec backend python -m unittest tests.users.test_entities.UserEntityTest.test_user_creation
 ```
 
 ## 📦 Gestión de Paquetes y Dependencias
@@ -633,26 +633,26 @@ docker-compose exec backend python -m unittest tests.users.test_entities.UserEnt
 
 ```bash
 # Instalar nuevas dependencias
-docker-compose exec backend pip install <nombre-paquete>
+docker compose exec backend pip install <nombre-paquete>
 
 # Actualizar requirements.txt después de instalar
-docker-compose exec backend pip freeze > requirements.txt
+docker compose exec backend pip freeze > requirements.txt
 
 # Verificar paquetes instalados
-docker-compose exec backend pip list
+docker compose exec backend pip list
 ```
 
 ### Frontend (Node.js)
 
 ```bash
 # Instalar nuevas dependencias
-docker-compose exec frontend npm install <nombre-paquete>
+docker compose exec frontend npm install <nombre-paquete>
 
 # Instalar dependencias de desarrollo
-docker-compose exec frontend npm install --save-dev <nombre-paquete>
+docker compose exec frontend npm install --save-dev <nombre-paquete>
 
 # Verificar paquetes instalados
-docker-compose exec frontend npm list
+docker compose exec frontend npm list
 ```
 
 ## 📂 Estructura de Directorios (Proyecto Completo)
@@ -708,16 +708,16 @@ frontend/
 
 ```bash
 # Verificar estado del servicio db
-docker-compose ps db
+docker compose ps db
 
 # Ver logs de la BD
-docker-compose logs db
+docker compose logs db
 
 # Comprobar healthcheck
-docker-compose ps
+docker compose ps
 
 # Reiniciar servicios
-docker-compose down && docker-compose up -d
+docker compose down && docker compose up -d
 ```
 
 ### Puerto ya en uso
@@ -726,7 +726,7 @@ docker-compose down && docker-compose up -d
 # Encontrar qué proceso usa el puerto (ej: 5173)
 lsof -i :5173
 
-# Cambiar puerto en docker-compose.yml
+# Cambiar puerto en docker compose.yml
 # - "5173:5173" → - "3000:5173"
 ```
 
@@ -734,8 +734,8 @@ lsof -i :5173
 
 ```bash
 # Eliminar y recrear volúmenes
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 ```
 
 ## 🔐 Seguridad - Checklist para Producción
