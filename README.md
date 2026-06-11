@@ -308,7 +308,7 @@ Si el directorio `frontend/src` está vacío, crear un nuevo proyecto Vite:
 
 ```bash
 # Crear proyecto Vite con TypeScript (RECOMENDADO)
-docker-compose run --rm frontend npm create vite@latest . -- --template react-ts
+docker compose run --rm frontend npm create vite@latest . -- --template react-ts
 ```
 
 > ⚠️ **Se recomienda `react-ts` (TypeScript)** para mejor integración con el `vite.config.ts` que configurarás después. Si prefieres JavaScript puro, usa `--template react`.
@@ -326,14 +326,14 @@ docker-compose run --rm frontend npm create vite@latest . -- --template react-ts
 
 ```bash
 # Instalar todas las dependencias
-docker-compose exec frontend npm install
+docker compose exec frontend npm install
 
 # Las dependencias de desarrollo necesarias para la configuración de Vite ya vienen incluidas
 # Si las necesitas instalar manualmente:
-# docker-compose exec frontend npm install --save-dev vite @vitejs/plugin-react
+# docker compose exec frontend npm install --save-dev vite @vitejs/plugin-react
 
 # Instalar paquetes adicionales (opcionales)
-docker-compose exec frontend npm install axios react-router-dom
+docker compose exec frontend npm install axios react-router-dom
 ```
 
 ### Paso 3: Estructura Recomendada de Proyecto
@@ -469,18 +469,12 @@ export default App;
 
 **frontend/vite.config.ts:**
 ```typescript
-import path from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
   server: {
     host: '0.0.0.0',
     port: 5173,
@@ -555,7 +549,7 @@ server: {
 
 ###### **3.2 Port: `5173`**
 - Puerto en el que escucha el dev server
-- Debe coincidir con el puerto expuesto en `docker-compose.yml` (`ports: - "5173:5173"`)
+- Debe coincidir con el puerto expuesto en `docker compose.yml` (`ports: - "5173:5173"`)
 
 ###### **3.3 Proxy: `/api` → Backend** ⭐ **IMPORTANTE PARA DESARROLLO**
 ```typescript
