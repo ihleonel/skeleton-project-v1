@@ -77,30 +77,22 @@ Crear el archivo `.env` basado en `.env.example`:
 cp .env.example .env
 ```
 
-**Archivo `.env` (valores por defecto):**
-```env
-SECRET_KEY=26qt^hayq@lv&&e$4kgb5@b*@9@a1z580dmg-%!_@$^kas=!*-
+⚠️ **IMPORTANTE:** Cambiar `SECRET_KEY` y `DB_PASSWORD` por valores seguros y únicos.
 
-# Configuración de Base de Datos
-DB_HOST=db
-DB_NAME=db_name
-DB_USER=db_user
-DB_PASSWORD=db_secure_password
-DB_PORT=5432
+### Paso 3: Contrucción de las imagenes
+
+Constriccion de las imagenes de los contenedores:
+```bash
+docker compose build --no-cache
 ```
 
-⚠️ **Para producción:** Cambiar `SECRET_KEY` y `DB_PASSWORD` por valores seguros y únicos.
-
 ## 🛠️ Inicializar Backend (Django REST Framework)
-
-**⚠️ IMPORTANTE:** Constriccion de las imagenes de los contenedores con `docker compose build --no-cache`
 
 ### Paso 1: Crear Proyecto Django
 
 Si el directorio `backend/` está vacío, necesitas crear un nuevo proyecto Django:
 
 ```bash
-# Crear proyecto Django dentro del contenedor
 docker compose run --rm backend python -m django startproject config .
 ```
 
@@ -168,7 +160,192 @@ REST_FRAMEWORK = {
 ALLOWED_HOSTS = ['*']
 ```
 
-### Paso 3: Crear Estructura de Directorios (Recomendado)
+## 🎨 Inicializar Frontend (Vite)
+
+**⚠️ IMPORTANTE:** Este paso debe ejecutarse ANTES de levantar los servicios con `docker compose up -d`
+
+### Paso 1: Crear Proyecto Vite
+
+Si el directorio `frontend/src` está vacío, crear un nuevo proyecto Vite:
+
+```bash
+docker compose run --rm frontend npm create vite@latest .
+```
+### Paso 2: Actualizar Configuración de Vite
+
+**CRÍTICO PARA DOCKER**
+- Escucha en **todas las interfaces de red** (no solo localhost)
+- En Docker, el frontend necesita ser accesible desde afuera del contenedor
+- Sin esto: ❌ El frontend no sería visible en `http://localhost:5173`
+- Con esto: ✅ Es visible desde el navegador del host
+
+**frontend/vite.config.ts:**
+```typescript
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://backend:8080',
+        changeOrigin: true,
+      },
+    },
+  },
+})
+```
+
+### Paso 3: Instalar Dependencias
+
+```bash
+# Instalar todas las dependencias
+docker compose exec frontend npm install
+
+# Las dependencias de desarrollo necesarias para la configuración de Vite ya vienen incluidas
+# Si las necesitas instalar manualmente:
+# docker compose exec frontend npm install --save-dev vite @vitejs/plugin-react
+
+# Instalar paquetes adicionales (opcionales)
+docker compose exec frontend npm install axios react-router-dom
+```
+
+### Paso 4: Estructura Recomendada de Proyecto
+
+```
+frontend/src/
+├── main.jsx                 # Punto de entrada
+├── App.jsx                  # Componente raíz
+├── App.css
+├── index.css
+├── components/
+│   ├── Header.jsx
+│   ├── Footer.jsx
+│   ├── Navbar.jsx
+│   └── ...
+├── pages/
+│   ├── Home.jsx
+│   ├── Dashboard.jsx
+│   ├── Profile.jsx
+│   └── ...
+├── services/
+│   ├── api.js              # Configuración de axios
+│   ├── userService.js      # Llamadas a API de usuarios
+│   ├── productService.js   # Llamadas a API de productos
+│   └── ...
+├── hooks/
+│   ├── useAuth.js
+│   ├── useFetch.js
+│   └── ...
+├── context/
+│   ├── AuthContext.jsx
+│   └── ...
+├── assets/
+│   ├── images/
+│   ├── icons/
+│   └── fonts/
+└── utils/
+    ├── helpers.js
+    ├── constants.js
+    └── ...
+```
+
+### Paso 5: Configurar Comunicación con Backend
+
+**frontend/src/services/api.js:**
+```javascript
+import axios from 'axios';
+
+const API_URL = 'http://localhost:8080/api';
+
+const api = axios.create({
+    baseURL: API_URL,
+    headers: {
+        'Content-Type': 'application/json',
+    },
+});
+
+// Interceptor para agregar token JWT
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+export default api;
+```
+
+**frontend/src/services/userService.js:**
+```javascript
+import api from './api';
+
+const userService = {
+    getAll: () => api.get('/users/'),
+    getById: (id) => api.get(`/users/${id}/`),
+    create: (data) => api.post('/users/', data),
+    update: (id, data) => api.put(`/users/${id}/`, data),
+    delete: (id) => api.delete(`/users/${id}/`),
+};
+
+export default userService;
+```
+
+### Paso 6: Crear Componentes React
+
+**frontend/src/App.jsx:**
+```javascript
+import { useEffect, useState } from 'react';
+import userService from './services/userService';
+import './App.css';
+
+function App() {
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    const fetchUsers = async () => {
+        try {
+            setLoading(true);
+            const response = await userService.getAll();
+            setUsers(response.data);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) return <div>Cargando...</div>;
+    if (error) return <div>Error: {error}</div>;
+
+    return (
+        <div>
+            <h1>Usuarios</h1>
+            <ul>
+                {users.map((user) => (
+                    <li key={user.id}>{user.username} ({user.email})</li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
+export default App;
+```
+
+## Recomendaciones generales backend
+
+### Estructura de Directorios (Recomendado)
 
 Estructura recomendada (Clean Architecture + Vertical Slicing):
 ```
@@ -225,7 +402,7 @@ backend/
     └── integration/                # Tests de integración
 ```
 
-### Paso 4: Crear tu Primera App (Opcional)
+### Crear tu Primera App (Opcional)
 
 ```bash
 # Crear una app dentro del contenedor (ej: usuarios)
@@ -296,196 +473,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('apps.users.urls')),
 ]
-```
-
-## 🎨 Inicializar Frontend (Vite)
-
-**⚠️ IMPORTANTE:** Este paso debe ejecutarse ANTES de levantar los servicios con `docker compose up -d`
-
-### Paso 1: Crear Proyecto Vite
-
-Si el directorio `frontend/src` está vacío, crear un nuevo proyecto Vite:
-
-```bash
-# Crear proyecto Vite con TypeScript (RECOMENDADO)
-docker compose run --rm frontend npm create vite@latest . -- --template react-ts
-```
-
-> ⚠️ **Se recomienda `react-ts` (TypeScript)** para mejor integración con el `vite.config.ts` que configurarás después. Si prefieres JavaScript puro, usa `--template react`.
-
-**Opciones de template disponibles:**
-- `react` - React con JSX
-- `react-ts` - React con TypeScript ⭐ **RECOMENDADO**
-- `vue` - Vue 3
-- `vue-ts` - Vue 3 con TypeScript
-- `preact` - Preact
-- `vanilla` - JavaScript vanilla
-- `svelte` - Svelte
-
-### Paso 2: Instalar Dependencias
-
-```bash
-# Instalar todas las dependencias
-docker compose exec frontend npm install
-
-# Las dependencias de desarrollo necesarias para la configuración de Vite ya vienen incluidas
-# Si las necesitas instalar manualmente:
-# docker compose exec frontend npm install --save-dev vite @vitejs/plugin-react
-
-# Instalar paquetes adicionales (opcionales)
-docker compose exec frontend npm install axios react-router-dom
-```
-
-### Paso 3: Estructura Recomendada de Proyecto
-
-```
-frontend/src/
-├── main.jsx                 # Punto de entrada
-├── App.jsx                  # Componente raíz
-├── App.css
-├── index.css
-├── components/
-│   ├── Header.jsx
-│   ├── Footer.jsx
-│   ├── Navbar.jsx
-│   └── ...
-├── pages/
-│   ├── Home.jsx
-│   ├── Dashboard.jsx
-│   ├── Profile.jsx
-│   └── ...
-├── services/
-│   ├── api.js              # Configuración de axios
-│   ├── userService.js      # Llamadas a API de usuarios
-│   ├── productService.js   # Llamadas a API de productos
-│   └── ...
-├── hooks/
-│   ├── useAuth.js
-│   ├── useFetch.js
-│   └── ...
-├── context/
-│   ├── AuthContext.jsx
-│   └── ...
-├── assets/
-│   ├── images/
-│   ├── icons/
-│   └── fonts/
-└── utils/
-    ├── helpers.js
-    ├── constants.js
-    └── ...
-```
-
-### Paso 4: Configurar Comunicación con Backend
-
-**frontend/src/services/api.js:**
-```javascript
-import axios from 'axios';
-
-const API_URL = 'http://localhost:8080/api';
-
-const api = axios.create({
-    baseURL: API_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-});
-
-// Interceptor para agregar token JWT
-api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
-
-export default api;
-```
-
-**frontend/src/services/userService.js:**
-```javascript
-import api from './api';
-
-const userService = {
-    getAll: () => api.get('/users/'),
-    getById: (id) => api.get(`/users/${id}/`),
-    create: (data) => api.post('/users/', data),
-    update: (id, data) => api.put(`/users/${id}/`, data),
-    delete: (id) => api.delete(`/users/${id}/`),
-};
-
-export default userService;
-```
-
-### Paso 5: Crear Componentes React
-
-**frontend/src/App.jsx:**
-```javascript
-import { useEffect, useState } from 'react';
-import userService from './services/userService';
-import './App.css';
-
-function App() {
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    useEffect(() => {
-        fetchUsers();
-    }, []);
-
-    const fetchUsers = async () => {
-        try {
-            setLoading(true);
-            const response = await userService.getAll();
-            setUsers(response.data);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    if (loading) return <div>Cargando...</div>;
-    if (error) return <div>Error: {error}</div>;
-
-    return (
-        <div>
-            <h1>Usuarios</h1>
-            <ul>
-                {users.map((user) => (
-                    <li key={user.id}>{user.username} ({user.email})</li>
-                ))}
-            </ul>
-        </div>
-    );
-}
-
-export default App;
-```
-
-### Paso 6: Configurar Vite para Dev Server
-
-**frontend/vite.config.ts:**
-```typescript
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    host: '0.0.0.0',
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://backend:8080',
-        changeOrigin: true,
-      },
-    },
-  },
-})
 ```
 
 #### 📌 Explicación de la Configuración de Vite
