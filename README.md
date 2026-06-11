@@ -95,13 +95,15 @@ DB_PORT=5432
 
 **⚠️ IMPORTANTE:** Este paso debe ejecutarse ANTES de levantar los servicios con `docker compose up -d`
 
+**⚠️ RECOMENDACION:** Constriccion de las imagenes de los contenedores con `docker compose build`
+
 ### Paso 1: Crear Proyecto Django
 
 Si el directorio `backend/` está vacío, necesitas crear un nuevo proyecto Django:
 
 ```bash
 # Crear proyecto Django dentro del contenedor
-docker compose run --rm backend django-admin startproject config .
+docker compose run --rm backend python -m django startproject config .
 ```
 
 Este comando crea:
