@@ -307,13 +307,15 @@ urlpatterns = [
 Si el directorio `frontend/src` está vacío, crear un nuevo proyecto Vite:
 
 ```bash
-# Crear proyecto Vite interactivo dentro del contenedor
-docker compose run --rm frontend npm create vite@latest . -- --template react
+# Crear proyecto Vite con TypeScript (RECOMENDADO)
+docker-compose run --rm frontend npm create vite@latest . -- --template react-ts
 ```
+
+> ⚠️ **Se recomienda `react-ts` (TypeScript)** para mejor integración con el `vite.config.ts` que configurarás después. Si prefieres JavaScript puro, usa `--template react`.
 
 **Opciones de template disponibles:**
 - `react` - React con JSX
-- `react-ts` - React con TypeScript
+- `react-ts` - React con TypeScript ⭐ **RECOMENDADO**
 - `vue` - Vue 3
 - `vue-ts` - Vue 3 con TypeScript
 - `preact` - Preact
@@ -324,10 +326,14 @@ docker compose run --rm frontend npm create vite@latest . -- --template react
 
 ```bash
 # Instalar todas las dependencias
-docker compose exec frontend npm install
+docker-compose exec frontend npm install
 
-# Instalar paquetes adicionales
-docker compose exec frontend npm install axios react-router-dom
+# Las dependencias de desarrollo necesarias para la configuración de Vite ya vienen incluidas
+# Si las necesitas instalar manualmente:
+# docker-compose exec frontend npm install --save-dev vite @vitejs/plugin-react
+
+# Instalar paquetes adicionales (opcionales)
+docker-compose exec frontend npm install axios react-router-dom
 ```
 
 ### Paso 3: Estructura Recomendada de Proyecto
@@ -461,22 +467,144 @@ export default App;
 
 ### Paso 6: Configurar Vite para Dev Server
 
-**frontend/vite.config.js:**
-```javascript
+**frontend/vite.config.ts:**
+```typescript
+import path from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   server: {
-    host: '0.0.0.0',  // Escucha en todas las interfaces
+    host: '0.0.0.0',
     port: 5173,
-    watch: {
-      usePolling: true,  // Necesario para hot-reload en Docker
+    proxy: {
+      '/api': {
+        target: 'http://backend:8080',
+        changeOrigin: true,
+      },
     },
   },
 })
 ```
+
+#### 📌 Explicación de la Configuración de Vite
+
+Esta configuración es **crítica** para el correcto funcionamiento del frontend en Docker. Veamos cada parte:
+
+##### **1. Plugins**
+```typescript
+plugins: [react()],
+```
+- Habilita soporte para React y JSX
+- Permite usar características modernas de React
+
+##### **2. Resolve - Path Alias** ⭐ **IMPORTANTE**
+```typescript
+resolve: {
+  alias: {
+    '@': path.resolve(__dirname, './src'),
+  },
+},
+```
+**¿Qué hace?**
+- Define un alias `@` que apunta a la carpeta `src/`
+- Permite importar así: `import Button from '@/components/Button'` en lugar de `import Button from '../../../components/Button'`
+
+**¿Por qué es importante?**
+- ✅ Evita imports profundos y confusos
+- ✅ Hace el código más legible y mantenible
+- ✅ Facilita refactoring (mover archivos sin romper imports)
+
+**Ejemplo de uso:**
+```javascript
+// ❌ SIN alias (feo y frágil)
+import UserService from '../../../../services/userService'
+import Button from '../../../components/Button'
+
+// ✅ CON alias (limpio y mantenible)
+import UserService from '@/services/userService'
+import Button from '@/components/Button'
+```
+
+##### **3. Server - Configuración del Dev Server**
+```typescript
+server: {
+  host: '0.0.0.0',
+  port: 5173,
+  proxy: {
+    '/api': {
+      target: 'http://backend:8080',
+      changeOrigin: true,
+    },
+  },
+},
+```
+
+###### **3.1 Host: `0.0.0.0`** ⭐ **CRÍTICO PARA DOCKER**
+- Escucha en **todas las interfaces de red** (no solo localhost)
+- En Docker, el frontend necesita ser accesible desde afuera del contenedor
+- Sin esto: ❌ El frontend no sería visible en `http://localhost:5173`
+- Con esto: ✅ Es visible desde el navegador del host
+
+###### **3.2 Port: `5173`**
+- Puerto en el que escucha el dev server
+- Debe coincidir con el puerto expuesto en `docker-compose.yml` (`ports: - "5173:5173"`)
+
+###### **3.3 Proxy: `/api` → Backend** ⭐ **IMPORTANTE PARA DESARROLLO**
+```typescript
+proxy: {
+  '/api': {
+    target: 'http://backend:8080',
+    changeOrigin: true,
+  },
+},
+```
+
+**¿Qué hace?**
+- Redirige todas las peticiones a `/api/*` al backend en `http://backend:8080/api/*`
+- Ejemplo: `http://localhost:5173/api/users/` → `http://backend:8080/api/users/`
+
+**¿Por qué es importante?**
+
+Sin proxy:
+```javascript
+// ❌ Hay que usar URLs completas
+fetch('http://localhost:8080/api/users')
+// ❌ Problema en producción: localhost no existe en el servidor
+// ❌ CORS issues posibles
+```
+
+Con proxy:
+```javascript
+// ✅ URLs relativas y limpias
+fetch('/api/users')
+// ✅ Funciona igual en desarrollo y producción
+// ✅ Sin problemas de CORS
+// ✅ El proxy automáticamente cambia 'changeOrigin: true' para que el backend piense que la petición viene directamente
+```
+
+**`changeOrigin: true` explica:**
+- Modifica el header `Origin` de la petición
+- El backend recibe las peticiones como si vinieran directamente desde el cliente
+- Evita problemas de CORS en desarrollo
+
+#### 📌 Resumen de por qué esta configuración es NECESARIA
+
+| Opción | Problema sin ella | Solución |
+|--------|------------------|----------|
+| `host: '0.0.0.0'` | Frontend no visible desde el navegador | Escucha en todas las interfaces |
+| `alias: '@'` | Imports complejos y frágiles | Alias simplifica imports |
+| `proxy: '/api'` | Peticiones a localhost (no funciona en Docker) | Proxy redirige al backend |
+| `changeOrigin: true` | Posibles errores CORS | Modifica headers correctamente |
+
+---
 
 ## 🎬 Levantando los Servicios
 
@@ -689,7 +817,7 @@ backend/
 ```
 frontend/
 ├── package.json            # Configuración de Node.js
-├── vite.config.js          # Configuración de Vite
+├── vite.config.ts          # Configuración de Vite (TypeScript)
 ├── Dockerfile              # Imagen Docker
 ├── src/
 │   ├── main.jsx           # Punto de entrada
