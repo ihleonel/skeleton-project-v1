@@ -42,6 +42,15 @@ El proyecto utiliza **Docker Compose** para orquestar tres servicios principales
 - **Build Tool:** Vite (por defecto)
 - **Hot Reload:** Habilitado para desarrollo
 
+### 4. **Nginx (Reverse Proxy)**
+- **Puerto:** 8888 (punto de entrada público)
+- **Rol:** Reverse proxy centralizado
+- **Funcionalidad:**
+  - Redirige tráfico `/api/*` → Backend (puerto 8080)
+  - Redirige tráfico `/` → Frontend (puerto 5173)
+  - Mantiene headers de cliente (IP real, protocolo, etc)
+  - Soporta HMR (Hot Module Reload) para desarrollo
+
 ## 🚀 Requisitos Previos
 
 Asegúrate de tener instalado:
@@ -256,6 +265,35 @@ export default api;
 
 ---
 
+## ⚙️ Configurar Nginx
+
+### Estructura de Nginx
+
+```
+nginx/
+├── Dockerfile              # Imagen Nginx personalizada
+└── conf.d/
+    └── default.conf        # Configuración de reverse proxy
+```
+
+### Puntos de Entrada
+
+- **Desarrollo local:** `http://localhost:8888`
+- **Frontend:** `http://localhost:8888/` (proxeado desde Vite)
+- **API Backend:** `http://localhost:8888/api/` (proxeado desde Django)
+
+### Modificar Configuración de Nginx
+
+Editar `nginx/conf.d/default.conf` para cambiar rutas, headers o comportamientos del proxy.
+
+**Validar sintaxis después de cambios:**
+```bash
+docker compose exec nginx nginx -t
+docker compose restart nginx
+```
+
+---
+
 ## 🏗️ Estructura Recomendada - Backend
 
 **Clean Architecture + Vertical Slicing:**
@@ -328,6 +366,7 @@ docker compose down -v
 # Reiniciar un servicio específico
 docker compose restart backend
 docker compose restart frontend
+docker compose restart nginx
 docker compose restart db
 ```
 
@@ -340,11 +379,13 @@ docker compose ps
 # Ver logs de un servicio específico (últimas líneas)
 docker compose logs backend
 docker compose logs frontend
+docker compose logs nginx
 docker compose logs db
 
 # Ver logs en vivo (con -f)
 docker compose logs -f backend
 docker compose logs -f frontend
+docker compose logs -f nginx
 ```
 
 ---

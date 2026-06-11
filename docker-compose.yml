@@ -40,7 +40,17 @@ services:
     working_dir: /src
     command: 'npm run dev'
     environment:
-      - VITE_API_URL=http://localhost:8080/api
+      - VITE_API_URL=http://localhost:8888/api
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "8888:8888"
+    depends_on:
+      - backend
+      - frontend
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
 
 volumes:
   postgres_data:
