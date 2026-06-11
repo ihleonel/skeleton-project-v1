@@ -83,9 +83,9 @@ SECRET_KEY=26qt^hayq@lv&&e$4kgb5@b*@9@a1z580dmg-%!_@$^kas=!*-
 
 # Configuración de Base de Datos
 DB_HOST=db
-DB_NAME=finance_db
-DB_USER=finance_user
-DB_PASSWORD=finance_secure_password
+DB_NAME=db_name
+DB_USER=db_user
+DB_PASSWORD=db_secure_password
 DB_PORT=5432
 ```
 
