@@ -240,7 +240,7 @@ frontend/src/
 docker compose exec frontend npm install
 
 # Instalar nuevos paquetes
-docker compose exec frontend npm install axios react-router-dom
+docker compose exec frontend npm install react-router-dom
 
 # Instalar como dependencia de desarrollo
 docker compose exec frontend npm install --save-dev <nombre-paquete>
@@ -253,14 +253,38 @@ docker compose exec frontend npm list
 
 **frontend/src/services/api.js:**
 ```javascript
-import axios from 'axios';
-const api = axios.create({ baseURL: 'http://localhost:8080/api' });
-api.interceptors.request.use((config) => {
+const API_BASE_URL = 'http://localhost:8888/api';
+
+async function apiCall(endpoint, options = {}) {
     const token = localStorage.getItem('access_token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-});
-export default api;
+
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+    };
+
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers,
+    });
+
+    if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+    }
+
+    return response.json();
+}
+
+export default apiCall;
+
+// Uso:
+// const users = await apiCall('/users');
+// const user = await apiCall('/users/1');
+// const newUser = await apiCall('/users', { method: 'POST', body: JSON.stringify({name: 'John'}) });
 ```
 
 ---
@@ -544,6 +568,7 @@ frontend/
 
 | Servicio | URL |
 |----------|-----|
+| **Nginx (Punto de entrada)** | http://localhost:8888 |
 | **Frontend** | http://localhost:5173 |
 | **Backend API** | http://localhost:8080/api |
 | **Admin Django** | http://localhost:8080/admin |
@@ -558,10 +583,10 @@ frontend/
 3. ✅ Inicializar Backend: `docker compose run --rm backend python -m django startproject config .`
 4. ✅ Configurar `settings.py` (BD, CORS, INSTALLED_APPS)
 5. ✅ Inicializar Frontend: `docker compose run --rm frontend npm create vite@latest .`
-6. ✅ Configurar `vite.config.ts` (host, proxy)
+6. ✅ Configurar `vite.config.ts` (host, proxy a Nginx)
 7. ✅ `docker compose up -d`
 8. ✅ `docker compose exec backend python manage.py migrate`
 9. ✅ `docker compose exec backend python manage.py createsuperuser`
-10. ✅ Acceder a http://localhost:5173
+10. ✅ Acceder a http://localhost:8888 (Nginx)
 
 ---
