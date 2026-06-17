@@ -1,0 +1,5 @@
+-r base.txt
+
+# Dev & debug tools
+django-extensions==3.2.3
+ipython==8.26.0

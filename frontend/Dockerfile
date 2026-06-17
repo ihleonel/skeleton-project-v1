@@ -1,9 +1,32 @@
-FROM node:25.9.0-alpine3.23
+# ── Development stage ─────────────────────────────────────────────────────
+FROM node:20-alpine AS development
 
-WORKDIR /src
+WORKDIR /app
 
-# Cambiar a usuario node para mayor seguridad
-USER node
+COPY package*.json ./
+RUN npm ci
 
-# No establecer CMD - permitir que docker-compose o el usuario ejecute comandos manualmente
-CMD ["sh"]
+COPY . .
+
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+# ── Build stage ───────────────────────────────────────────────────────────
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# ── Production stage (served by nginx separately or embedded) ─────────────
+FROM nginx:alpine AS production
+
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

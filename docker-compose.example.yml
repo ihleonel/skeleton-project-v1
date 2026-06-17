@@ -34,11 +34,10 @@ services:
   frontend:
     build: ./frontend
     volumes:
-      - ./frontend:/src
+      - ./frontend:/app
+      - /app/node_modules
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
-    working_dir: /src
-    command: 'npm run dev'
     environment:
       - VITE_API_URL=http://localhost:${NGINX_PORT}/api
 

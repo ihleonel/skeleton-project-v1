@@ -1,368 +1,181 @@
-# Skeleton Project - Sistema Web Base
+# Skeleton Project v1
 
-Un **skeleton project** listo para usar como base de sistemas web modernos. Incluye una arquitectura dockerizada con servicios independientes (base de datos, backend API y frontend) que pueden ser escalados y adaptados según las necesidades del proyecto.
+> Django REST Framework · Vite + React + TypeScript · PostgreSQL · Nginx
+> Todo gestionado con Docker y Docker Compose.
 
-## 📋 Estructura del Proyecto
+---
+
+## Estructura del proyecto
 
 ```
-skeleton-project-v1/
-├── backend/                  # API REST con Django
-│   ├── Dockerfile           # Configuración de Docker para backend
-│   ├── requirements.txt      # Dependencias de Python
-│   └── ... (código Django)
-├── frontend/                 # Aplicación frontend (Node.js)
-│   ├── Dockerfile           # Configuración de Docker para frontend
-│   └── ... (código Node.js/React)
-├── docker compose.yml       # Orquestación de servicios
-├── .env.example             # Variables de entorno de ejemplo
-├── .gitignore               # Archivos ignorados por Git
-└── README.md                # Este archivo
+fullstack-skeleton/
+├── backend/                    # Django + DRF
+│   ├── apps/
+│   │   ├── core/               # Health-check y utilidades base
+│   │   └── users/              # Modelo User personalizado + endpoint /me/
+│   ├── config/
+│   │   ├── settings/
+│   │   │   ├── base.py         # Configuración compartida
+│   │   │   ├── development.py  # Dev overrides
+│   │   │   └── production.py   # Prod overrides
+│   │   ├── urls.py
+│   │   └── wsgi.py
+│   ├── requirements/
+│   │   ├── base.txt
+│   │   ├── development.txt
+│   │   └── production.txt
+│   └── Dockerfile
+├── frontend/                   # Vite + React + TypeScript
+│   ├── src/
+│   │   ├── pages/
+│   │   ├── services/api.ts     # Axios preconfigurado con CSRF
+│   │   └── ...
+│   ├── Dockerfile              # Multi-stage: dev / build / production
+│   └── vite.config.ts
+├── nginx/
+│   ├── conf.d/default.conf     # Proxy inverso: /api → backend, / → frontend
+│   └── Dockerfile
+├── scripts/
+│   └── bootstrap.sh            # Setup de un solo comando
+├── docker-compose.yml
+├── .env.example
+└── .gitignore
 ```
 
-## 🏗️ Arquitectura
+---
 
-El proyecto utiliza **Docker Compose** para orquestar 4 servicios principales:
+## Primeros pasos (< 5 minutos)
 
-### 1. **Base de Datos (PostgreSQL)**
-- **Puerto:** 5432 (interno)
-- **Imagen:** postgres:16
-- **Rol:** Almacenamiento de datos persistente
-- **Volumen:** `postgres_data` (para persistencia de datos)
-
-### 2. **Backend (Django REST Framework)**
-- **Puerto:** 8080
-- **Framework:** Django 5.0 + Django REST Framework
-- **Base de Datos:** PostgreSQL
-- **Autenticación:** JWT (djangorestframework-simplejwt)
-- **CORS:** Habilitado para comunicación con frontend
-
-### 3. **Frontend (Node.js)**
-- **Puerto:** 5173 (Vite development server)
-- **Runtime:** Node.js 25.9
-- **Build Tool:** Vite (por defecto)
-- **Hot Reload:** Habilitado para desarrollo
-
-### 4. **Nginx (Reverse Proxy)**
-- **Puerto:** 8888 (punto de entrada público)
-- **Rol:** Reverse proxy centralizado
-- **Funcionalidad:**
-  - Redirige tráfico `/api/*` → Backend (puerto 8080)
-  - Redirige tráfico `/` → Frontend (puerto 5173)
-  - Mantiene headers de cliente (IP real, protocolo, etc)
-  - Soporta HMR (Hot Module Reload) para desarrollo
-
-## 🚀 Requisitos Previos
-
-Asegúrate de tener instalado:
-
-- **Docker** (versión 20.10+)
-- **Docker Compose** (versión 2.0+)
-- **Git** (para clonar el proyecto)
-
-Verifica la instalación:
-```bash
-docker --version
-docker compose --version
-```
-
-## ⚙️ Configuración Inicial
-
-### Paso 1: Obtener el Proyecto
+### Opción A — Bootstrap automático
 
 ```bash
-# Opción A: Clonar desde repositorio
-git clone <URL_DEL_REPOSITORIO> mi-proyecto
-cd mi-proyecto
-
-# Opción B: Usar como plantilla
-# Usar el botón "Use this template" en GitHub
+git clone <repo-url> myproject && cd myproject
+bash scripts/bootstrap.sh
 ```
 
-### Paso 2: Configurar Variables de Entorno
+El script:
+1. Copia `.env.example` → `.env`
+2. Corre `docker compose build --no-cache`
+3. Levanta todos los servicios
+4. Corre las migraciones de Django
 
-Crear el archivo `.env` basado en `.env.example`:
+### Opción B — Manual
 
 ```bash
+# 1. Clonar
+git clone <repo-url> myproject && cd myproject
+
+# 2. Configurar variables de entorno
 cp .env.example .env
-```
+# Editar .env: cambiar DJANGO_SECRET_KEY, POSTGRES_PASSWORD, etc.
 
-⚠️ **IMPORTANTE:** Cambiar `SECRET_KEY` y `DB_PASSWORD` por valores seguros y únicos.
-
-### Paso 3: Configurar Docker Compose
-Crear el archivo `docker-compose.yml` basado en `docker-compose.example.yml`
-
-```bash
-cp docker-compose.example.yml docker-compose.yml
-```
-
-### Paso 4: Contrucción de las imagenes
-
-Constriccion de las imagenes de los contenedores:
-```bash
+# 3. Construir imágenes
 docker compose build --no-cache
-```
-## Estructura Recomendada - Backend
 
-**Clean Architecture + Vertical Slicing + Scream Architecture:**
-
-```
-backend/
-├── manage.py
-├── requirements.txt
-├── config/
-│   ├── settings.py
-│   ├── urls.py
-│   ├── asgi.py
-│   └── wsgi.py
-├── apps/                           # Módulos autónomos por feature
-│   ├── users/
-│   │   ├── domain/                 # Lógica pura (entities.py, repositories.py)
-│   │   ├── application/            # Casos de uso (use_cases.py, dtos.py)
-│   │   └── infrastructure/         # Implementación (models.py, views.py, serializers.py)
-│   ├── products/
-│   │   ├── domain/
-│   │   ├── application/
-│   │   └── infrastructure/
-│   └── ...
-├── shared/                         # Código compartido
-│   ├── domain/
-│   ├── application/
-│   └── infrastructure/
-└── tests/                          # Tests paralelos a apps/
-    ├── users/
-    ├── products/
-    └── integration/
-```
-
----
-
-## Estructura Recomendada - Frontend
-
-```
-frontend/src/
-├── main.jsx                 # Punto de entrada
-├── App.jsx                  # Componente raíz
-├── components/              # Componentes reutilizables
-│   ├── Header.jsx
-│   ├── Footer.jsx
-│   └── ...
-├── pages/                   # Páginas
-│   ├── Home.jsx
-│   ├── Dashboard.jsx
-│   └── ...
-├── services/                # Servicios API
-│   ├── api.js              # Configuración axios
-│   ├── userService.js
-│   └── ...
-├── hooks/                   # Custom hooks
-├── context/                 # Context API
-├── assets/                  # Imágenes, iconos, fuentes
-└── utils/                   # Utilidades
-```
-
-## Configurar Nginx
-
-### Estructura de Nginx
-
-```
-nginx/
-├── Dockerfile              # Imagen Nginx personalizada
-└── conf.d/
-    └── default.conf        # Configuración de reverse proxy
-```
-
-### Puntos de Entrada
-
-- **Desarrollo local:** `http://localhost:8888`
-- **Frontend:** `http://localhost:8888/` (proxeado desde Vite)
-- **API Backend:** `http://localhost:8888/api/` (proxeado desde Django)
-
-### Modificar Configuración de Nginx
-
-Editar `nginx/conf.d/default.conf` para cambiar rutas, headers o comportamientos del proxy.
-
-**Validar sintaxis después de cambios:**
-```bash
-docker compose exec nginx nginx -t
-docker compose restart nginx
-```
-
----
-
-## 🎬 Gestión de Servicios
-
-### Levantar Servicios
-
-```bash
-# Levantar todos los servicios en background
+# 4. Levantar servicios
 docker compose up -d
 
-# Levantar con reconstrucción de imágenes
-docker compose up -d --build
+# 5. Migraciones y superusuario
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py createsuperuser
+```
 
-# Levantar sin cache
-docker compose build --no-cache && docker compose up -d
+---
 
+## URLs disponibles
+
+| Servicio       | URL                         |
+|----------------|-----------------------------|
+| Frontend       | http://localhost            |
+| API REST       | http://localhost/api/       |
+| Health Check   | http://localhost/api/health/|
+| Django Admin   | http://localhost/admin/     |
+| Archivos media | http://localhost/media/     |
+
+---
+
+## Variables de entorno (.env)
+
+| Variable                     | Descripción                                  | Ejemplo                  |
+|------------------------------|----------------------------------------------|--------------------------|
+| `COMPOSE_PROJECT_NAME`       | Prefijo de los contenedores                  | `myproject`              |
+| `POSTGRES_DB`                | Nombre de la base de datos                   | `myproject_db`           |
+| `POSTGRES_USER`              | Usuario de PostgreSQL                        | `myproject_user`         |
+| `POSTGRES_PASSWORD`          | Contraseña de PostgreSQL                     | `strongpassword`         |
+| `DJANGO_SECRET_KEY`          | Clave secreta de Django                      | (generá una aleatoria)   |
+| `DJANGO_ENV`                 | Entorno (`development` / `production`)       | `development`            |
+| `DJANGO_DEBUG`               | Activar modo debug                           | `True`                   |
+| `DJANGO_ALLOWED_HOSTS`       | Hosts permitidos (separados por coma)        | `localhost,127.0.0.1`    |
+| `DJANGO_CORS_ALLOWED_ORIGINS`| Orígenes CORS (separados por coma)           | `http://localhost`       |
+| `GUNICORN_WORKERS`           | Número de workers de Gunicorn                | `2`                      |
+| `FRONTEND_TARGET`            | Stage del Dockerfile del frontend            | `development`            |
+| `VITE_API_BASE_URL`          | Base URL de la API para Axios                | `http://localhost/api`   |
+| `NGINX_HTTP_PORT`            | Puerto HTTP del host                         | `80`                     |
+
+---
+
+## Comandos útiles
+
+```bash
 # Ver logs en tiempo real
 docker compose logs -f
-```
 
-### Detener y Reiniciar
-
-```bash
-# Detener todos los servicios
-docker compose down
-
-# Detener y eliminar volúmenes (⚠️ borra datos de BD)
-docker compose down -v
-
-# Reiniciar un servicio específico
-docker compose restart backend
-docker compose restart frontend
-docker compose restart nginx
-docker compose restart db
-```
-
-### Ver Estado y Logs
-
-```bash
-# Ver estado de todos los contenedores
-docker compose ps
-
-# Ver logs de un servicio específico (últimas líneas)
-docker compose logs backend
-docker compose logs frontend
-docker compose logs nginx
-docker compose logs db
-
-# Ver logs en vivo (con -f)
+# Logs de un servicio específico
 docker compose logs -f backend
-docker compose logs -f frontend
-docker compose logs -f nginx
-```
 
----
-
-## 🔧 Comandos Backend (Django)
-
-### Instalar Dependencias
-
-```bash
-# Instalar todas las dependencias
-docker compose exec backend pip install -r requirements.txt
-
-# Instalar nueva dependencia
-docker compose exec backend pip install <nombre-paquete>
-
-# Actualizar requirements.txt
-docker compose exec backend pip freeze > requirements.txt
-
-# Ver paquetes instalados
-docker compose exec backend pip list
-```
-
-### Migraciones de Base de Datos
-
-```bash
-# Crear migraciones de modelos nuevos/modificados
-docker compose exec backend python manage.py makemigrations
-
-# Ejecutar migraciones
-docker compose exec backend python manage.py migrate
-
-# Ver estado de migraciones
-docker compose exec backend python manage.py showmigrations
-```
-
-### Gestión de Admin
-
-```bash
-# Crear superusuario (admin)
-docker compose exec backend python manage.py createsuperuser
-
-# Cambiar contraseña de usuario
-docker compose exec backend python manage.py changepassword <usuario>
-```
-
-### Testing en Backend
-
-```bash
-# Ejecutar todos los tests
-docker compose exec backend python -m unittest discover -s tests
-
-# Ejecutar tests de un módulo específico
-docker compose exec backend python -m unittest tests.users
-
-# Ejecutar con output verboso
-docker compose exec backend python -m unittest discover -s tests -v
-
-# Ejecutar un archivo de tests específico
-docker compose exec backend python -m unittest tests.users.test_entities
-
-# Ejecutar un test case específico
-docker compose exec backend python -m unittest tests.users.test_entities.UserEntityTest.test_creation
-```
-
-### Crear Apps
-
-```bash
-# Ejemplo para crear nueva app
-docker compose exec backend python manage.py startapp users apps/users
-docker compose exec backend python manage.py startapp products apps/products
-```
-
-### Otros Comandos Útiles
-
-```bash
-# Shell interactivo de Django
+# Correr shell de Django
 docker compose exec backend python manage.py shell
 
-# Ejecutar comando customizado
-docker compose exec backend python manage.py <comando>
+# Correr tests
+docker compose exec backend python manage.py test
+
+# Makemigrations para una app
+docker compose exec backend python manage.py makemigrations users
+
+# Detener servicios
+docker compose down
+
+# Detener y borrar volúmenes (⚠️ borra la DB)
+docker compose down -v
 ```
 
 ---
 
-## 🎨 Comandos Frontend (Node.js)
+## Arquitectura de red
 
-### Instalar Dependencias
-
-```bash
-# Instalar todas las dependencias
-docker compose exec frontend npm install
-
-# Instalar nuevo paquete
-docker compose exec frontend npm install <nombre-paquete>
-
-# Instalar como dependencia de desarrollo
-docker compose exec frontend npm install --save-dev <nombre-paquete>
-
-# Ver paquetes instalados
-docker compose exec frontend npm list
+```
+Browser
+   │
+   ▼
+[Nginx :80]
+   ├── /api/*    ──► [backend:8000]  (Django / DRF)
+   ├── /admin/*  ──► [backend:8000]
+   ├── /static/  ──► volumen static_files
+   ├── /media/   ──► volumen media_files
+   └── /*        ──► [frontend:5173] (Vite dev server)
+                         │
+                    [db:5432] (PostgreSQL)  ◄── [backend]
 ```
 
-### Build y Desarrollo
-
-```bash
-# Build para producción
-docker compose exec frontend npm run build
-
-# Ver scripts disponibles
-docker compose exec frontend npm run
-
-# Ejecutar script personalizado
-docker compose exec frontend npm run <script-name>
-```
+Dos redes Docker internas:
+- **backend_net**: `db` ↔ `backend` (la DB nunca es accesible desde el exterior)
+- **proxy_net**: `nginx` ↔ `backend` ↔ `frontend`
 
 ---
 
-## ✅ Acceso a los Servicios
+## Pasar a producción
 
-| Servicio | URL |
-|----------|-----|
-| **Nginx (Punto de entrada)** | http://localhost:8888 |
-| **Frontend** | http://localhost:5173 |
-| **Backend API** | http://localhost:8080/api |
-| **Admin Django** | http://localhost:8080/admin |
-| **Base de Datos** | localhost:5432 |
+1. En `.env` setear `DJANGO_ENV=production`, `DJANGO_DEBUG=False`, `FRONTEND_TARGET=production`
+2. Generar un `DJANGO_SECRET_KEY` fuerte
+3. Actualizar `DJANGO_ALLOWED_HOSTS` con el dominio real
+4. `docker compose build --no-cache && docker compose up -d`
 
+---
+
+## Agregar una nueva app Django
+
+```bash
+docker compose exec backend python manage.py startapp nombre_app apps/nombre_app
+```
+
+Luego agregar `"apps.nombre_app"` en `LOCAL_APPS` dentro de `config/settings/base.py`.

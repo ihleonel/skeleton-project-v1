@@ -1,8 +1,9 @@
-FROM nginx:alpine
+FROM nginx:1.27-alpine
 
-# Copiar configuración personalizada
-COPY conf.d/default.conf /etc/nginx/conf.d/default.conf
+# Remove default config
+RUN rm /etc/nginx/conf.d/default.conf
 
-EXPOSE 8888
+COPY conf.d/ /etc/nginx/conf.d/
 
+EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

@@ -1,17 +1,22 @@
-FROM python:3.12-alpine
+FROM python:3.12-slim
 
-ARG USER_ID=1000
-ARG GROUP_ID=1000
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+  && rm -rf /var/lib/apt/lists/*
 
-RUN addgroup -g ${GROUP_ID} -S appgroup && \
-    adduser -u ${USER_ID} -D -S -G appgroup appuser
+WORKDIR /app
 
-USER appuser
+# Install Python dependencies first (layer cache)
+COPY requirements/ requirements/
+RUN pip install --no-cache-dir -r requirements/development.txt
 
-WORKDIR /code
+# Copy source
+COPY . .
 
-COPY . /code/
+# Create dirs for static and media
+RUN mkdir -p staticfiles mediafiles
 
-RUN pip install -r requirements.txt
-
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8080"]
+EXPOSE 8000
