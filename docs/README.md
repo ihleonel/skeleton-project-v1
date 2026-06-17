@@ -21,7 +21,7 @@ skeleton-project-v1/
 
 ## 🏗️ Arquitectura
 
-El proyecto utiliza **Docker Compose** para orquestar tres servicios principales:
+El proyecto utiliza **Docker Compose** para orquestar 4 servicios principales:
 
 ### 1. **Base de Datos (PostgreSQL)**
 - **Puerto:** 5432 (interno)
@@ -88,239 +88,22 @@ cp .env.example .env
 
 ⚠️ **IMPORTANTE:** Cambiar `SECRET_KEY` y `DB_PASSWORD` por valores seguros y únicos.
 
-### Paso 3: Contrucción de las imagenes
+### Paso 3: Configurar Docker Compose
+Crear el archivo `docker-compose.yml` basado en `docker-compose.example.yml`
+
+```bash
+cp docker-compose.example.yml docker-compose.yml
+```
+
+### Paso 4: Contrucción de las imagenes
 
 Constriccion de las imagenes de los contenedores:
 ```bash
 docker compose build --no-cache
 ```
+## Estructura Recomendada - Backend
 
-## 🛠️ Inicializar Backend (Django REST Framework)
-
-### Paso 1: Crear Proyecto Django
-
-Si el directorio `backend/` está vacío, necesitas crear un nuevo proyecto Django:
-
-```bash
-docker compose run --rm backend python -m django startproject config .
-```
-
-Este comando crea:
-- `manage.py` - Script de administración de Django
-- `config/` - Carpeta de configuración del proyecto
-
-### Paso 2: Actualizar Configuración de Django
-
-Editar `backend/config/settings.py` para configurar la base de datos y los servicios:
-
-```python
-# Agregar INSTALLED_APPS
-INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework',                    # Django REST Framework
-    'rest_framework_simplejwt',          # JWT Authentication
-    'corsheaders',                       # CORS
-    # Aquí van tus apps personalizadas
-    # 'apps.users',
-    # 'apps.products',
-]
-
-# Configurar CORS
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',           # Agregar esta línea
-    'django.middleware.common.CommonMiddleware',
-    # ... resto de middleware
-]
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",      # Frontend local
-    "http://127.0.0.1:5173",
-]
-
-# Configurar Base de Datos PostgreSQL
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'db_name'),
-        'USER': os.getenv('DB_USER', 'db_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'finance_secure_password'),
-        'HOST': os.getenv('DB_HOST', 'db'),
-        'PORT': os.getenv('DB_PORT', '5432'),
-    }
-}
-
-# Configurar REST Framework
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
-}
-
-# Permitir peticiones desde cualquier origen en desarrollo
-# ⚠️ Cambiar en producción
-ALLOWED_HOSTS = ['*']
-```
-
-## 🎨 Inicializar Frontend (Vite)
-
-**⚠️ IMPORTANTE:** Este paso debe ejecutarse ANTES de levantar los servicios con `docker compose up -d`
-
-### Paso 1: Crear Proyecto Vite
-
-Si el directorio `frontend/src` está vacío, crear un nuevo proyecto Vite:
-
-```bash
-docker compose run --rm frontend npm create vite@latest .
-```
-### Paso 2: Actualizar Configuración de Vite
-
-**CRÍTICO PARA DOCKER**
-- Escucha en **todas las interfaces de red** (no solo localhost)
-- En Docker, el frontend necesita ser accesible desde afuera del contenedor
-- Sin esto: ❌ El frontend no sería visible en `http://localhost:5173`
-- Con esto: ✅ Es visible desde el navegador del host
-
-**frontend/vite.config.ts:**
-```typescript
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    host: '0.0.0.0',
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://nginx:8888',
-        changeOrigin: true,
-      },
-    },
-  },
-})
-```
-
-### Paso 3: Estructura Recomendada - Frontend
-
-```
-frontend/src/
-├── main.jsx                 # Punto de entrada
-├── App.jsx                  # Componente raíz
-├── components/              # Componentes reutilizables
-│   ├── Header.jsx
-│   ├── Footer.jsx
-│   └── ...
-├── pages/                   # Páginas
-│   ├── Home.jsx
-│   ├── Dashboard.jsx
-│   └── ...
-├── services/                # Servicios API
-│   ├── api.js              # Configuración axios
-│   ├── userService.js
-│   └── ...
-├── hooks/                   # Custom hooks
-├── context/                 # Context API
-├── assets/                  # Imágenes, iconos, fuentes
-└── utils/                   # Utilidades
-```
-
-### Paso 4: Instalar Dependencias Frontend
-
-```bash
-# Instalar todas las dependencias
-docker compose exec frontend npm install
-
-# Instalar nuevos paquetes
-docker compose exec frontend npm install react-router-dom
-
-# Instalar como dependencia de desarrollo
-docker compose exec frontend npm install --save-dev <nombre-paquete>
-
-# Verificar paquetes instalados
-docker compose exec frontend npm list
-```
-
-### Paso 5: Configurar Comunicación Backend-Frontend
-
-**frontend/src/services/api.js:**
-```javascript
-const API_BASE_URL = 'http://localhost:8888/api';
-
-async function apiCall(endpoint, options = {}) {
-    const token = localStorage.getItem('access_token');
-
-    const headers = {
-        'Content-Type': 'application/json',
-        ...options.headers,
-    };
-
-    if (token) {
-        headers.Authorization = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...options,
-        headers,
-    });
-
-    if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-    }
-
-    return response.json();
-}
-
-export default apiCall;
-
-// Uso:
-// const users = await apiCall('/users');
-// const user = await apiCall('/users/1');
-// const newUser = await apiCall('/users', { method: 'POST', body: JSON.stringify({name: 'John'}) });
-```
-
----
-
-## ⚙️ Configurar Nginx
-
-### Estructura de Nginx
-
-```
-nginx/
-├── Dockerfile              # Imagen Nginx personalizada
-└── conf.d/
-    └── default.conf        # Configuración de reverse proxy
-```
-
-### Puntos de Entrada
-
-- **Desarrollo local:** `http://localhost:8888`
-- **Frontend:** `http://localhost:8888/` (proxeado desde Vite)
-- **API Backend:** `http://localhost:8888/api/` (proxeado desde Django)
-
-### Modificar Configuración de Nginx
-
-Editar `nginx/conf.d/default.conf` para cambiar rutas, headers o comportamientos del proxy.
-
-**Validar sintaxis después de cambios:**
-```bash
-docker compose exec nginx nginx -t
-docker compose restart nginx
-```
-
----
-
-## 🏗️ Estructura Recomendada - Backend
-
-**Clean Architecture + Vertical Slicing:**
+**Clean Architecture + Vertical Slicing + Scream Architecture:**
 
 ```
 backend/
@@ -351,11 +134,57 @@ backend/
     └── integration/
 ```
 
-### Crear Primera App
+---
 
+## Estructura Recomendada - Frontend
+
+```
+frontend/src/
+├── main.jsx                 # Punto de entrada
+├── App.jsx                  # Componente raíz
+├── components/              # Componentes reutilizables
+│   ├── Header.jsx
+│   ├── Footer.jsx
+│   └── ...
+├── pages/                   # Páginas
+│   ├── Home.jsx
+│   ├── Dashboard.jsx
+│   └── ...
+├── services/                # Servicios API
+│   ├── api.js              # Configuración axios
+│   ├── userService.js
+│   └── ...
+├── hooks/                   # Custom hooks
+├── context/                 # Context API
+├── assets/                  # Imágenes, iconos, fuentes
+└── utils/                   # Utilidades
+```
+
+## Configurar Nginx
+
+### Estructura de Nginx
+
+```
+nginx/
+├── Dockerfile              # Imagen Nginx personalizada
+└── conf.d/
+    └── default.conf        # Configuración de reverse proxy
+```
+
+### Puntos de Entrada
+
+- **Desarrollo local:** `http://localhost:8888`
+- **Frontend:** `http://localhost:8888/` (proxeado desde Vite)
+- **API Backend:** `http://localhost:8888/api/` (proxeado desde Django)
+
+### Modificar Configuración de Nginx
+
+Editar `nginx/conf.d/default.conf` para cambiar rutas, headers o comportamientos del proxy.
+
+**Validar sintaxis después de cambios:**
 ```bash
-docker compose run --rm backend python manage.py startapp users apps/users
-docker compose run --rm backend python manage.py startapp products apps/products
+docker compose exec nginx nginx -t
+docker compose restart nginx
 ```
 
 ---
@@ -477,7 +306,7 @@ docker compose exec backend python -m unittest tests.users.test_entities.UserEnt
 ### Crear Apps
 
 ```bash
-# Crear nueva app
+# Ejemplo para crear nueva app
 docker compose exec backend python manage.py startapp users apps/users
 docker compose exec backend python manage.py startapp products apps/products
 ```
@@ -527,43 +356,6 @@ docker compose exec frontend npm run <script-name>
 
 ---
 
-## 📂 Resumen de Estructuras
-
-### Backend
-
-```
-backend/
-├── manage.py
-├── requirements.txt
-├── config/
-│   ├── settings.py, urls.py, asgi.py, wsgi.py
-├── apps/                    # Módulos por feature
-│   ├── users/
-│   │   ├── domain/         # Lógica pura
-│   │   ├── application/    # Casos de uso
-│   │   └── infrastructure/ # Modelos, views, serializers
-│   └── products/
-├── shared/                  # Código compartido
-└── tests/                   # Tests paralelos a apps/
-```
-
-### Frontend
-
-```
-frontend/
-├── package.json, vite.config.ts
-├── src/
-│   ├── main.jsx
-│   ├── components/          # Componentes reutilizables
-│   ├── pages/              # Páginas
-│   ├── services/           # API clients
-│   ├── hooks/              # Custom hooks
-│   ├── context/            # Context API
-│   └── assets/             # Imágenes, fonts
-```
-
----
-
 ## ✅ Acceso a los Servicios
 
 | Servicio | URL |
@@ -574,19 +366,3 @@ frontend/
 | **Admin Django** | http://localhost:8080/admin |
 | **Base de Datos** | localhost:5432 |
 
----
-
-## 🚀 Checklist Rápido
-
-1. ✅ Configurar `.env` con valores únicos (`SECRET_KEY`, `DB_PASSWORD`)
-2. ✅ `docker compose build --no-cache`
-3. ✅ Inicializar Backend: `docker compose run --rm backend python -m django startproject config .`
-4. ✅ Configurar `settings.py` (BD, CORS, INSTALLED_APPS)
-5. ✅ Inicializar Frontend: `docker compose run --rm frontend npm create vite@latest .`
-6. ✅ Configurar `vite.config.ts` (host, proxy a Nginx)
-7. ✅ `docker compose up -d`
-8. ✅ `docker compose exec backend python manage.py migrate`
-9. ✅ `docker compose exec backend python manage.py createsuperuser`
-10. ✅ Acceder a http://localhost:8888 (Nginx)
-
----
