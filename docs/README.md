@@ -35,8 +35,6 @@ fullstack-skeleton/
 ├── nginx/
 │   ├── conf.d/default.conf     # Proxy inverso: /api → backend, / → frontend
 │   └── Dockerfile
-├── scripts/
-│   └── bootstrap.sh            # Setup de un solo comando
 ├── docker-compose.yml
 ├── .env.example
 └── .gitignore
@@ -46,36 +44,25 @@ fullstack-skeleton/
 
 ## Primeros pasos (< 5 minutos)
 
-### Opción A — Bootstrap automático
-
-```bash
-git clone <repo-url> myproject && cd myproject
-bash scripts/bootstrap.sh
-```
-
-El script:
-1. Copia `.env.example` → `.env`
-2. Corre `docker compose build --no-cache`
-3. Levanta todos los servicios
-4. Corre las migraciones de Django
-
-### Opción B — Manual
-
 ```bash
 # 1. Clonar
 git clone <repo-url> myproject && cd myproject
 
 # 2. Configurar variables de entorno
 cp .env.example .env
-# Editar .env: cambiar DJANGO_SECRET_KEY, POSTGRES_PASSWORD, etc.
+# Editar .env: cambiar DJANGO_SECRET_KEY, DB_PASSWORD, etc.
 
-# 3. Construir imágenes
+# 3. Configurar docker-compose
+cp docker-compose.example.yml docker-compose.yml
+# Editar docker-compose.yml si necesitas ajustes de servicios/red/volúmenes
+
+# 4. Construir imágenes
 docker compose build --no-cache
 
-# 4. Levantar servicios
+# 5. Levantar servicios
 docker compose up -d
 
-# 5. Migraciones y superusuario
+# 6. Migraciones y superusuario
 docker compose exec backend python manage.py migrate
 docker compose exec backend python manage.py createsuperuser
 ```
