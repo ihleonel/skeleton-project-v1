@@ -1,4 +1,0 @@
--r base.txt
-
-# Production extras
-django-storages==1.14.4
