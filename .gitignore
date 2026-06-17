@@ -102,3 +102,6 @@ yarn.lock
 # Translations
 *.mo
 *.pot
+
+# Docker-compose override files
+docker-compose.yml
