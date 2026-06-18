@@ -12,30 +12,24 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
-from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Load environment variables from .env (if present)
-load_dotenv(BASE_DIR / ".env")
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-dev-only-do-not-use-in-prod",
-)
+# Variables MUST be provided by docker-compose.yml (environment: section).
+# Failing loudly here is intentional: missing config should never be silent.
+SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
+DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = os.getenv(
-    "DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1"
-).split(",")
+ALLOWED_HOSTS = os.environ.get(
+    "DJANGO_ALLOWED_HOSTS", ""
+).split(",") if os.environ.get("DJANGO_ALLOWED_HOSTS") else []
 
 
 # Application definition
@@ -91,11 +85,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'myproject_db'),
-        'USER': os.getenv('DB_USER', 'myproject_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', 'db'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+        'NAME': os.environ['DB_NAME'],
+        'USER': os.environ['DB_USER'],
+        'PASSWORD': os.environ['DB_PASSWORD'],
+        'HOST': os.environ.get('DB_HOST', 'db'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -159,10 +153,11 @@ REST_FRAMEWORK = {
 
 # ── CORS ──────────────────────────────────────────────────────────────────
 # https://github.com/adamchainz/django-cors-headers
-CORS_ALLOWED_ORIGINS = os.getenv(
-    'DJANGO_CORS_ALLOWED_ORIGINS',
-    'http://localhost,http://127.0.0.1',
-).split(',')
+CORS_ALLOWED_ORIGINS = [
+    origin for origin in os.environ.get(
+        'DJANGO_CORS_ALLOWED_ORIGINS', ''
+    ).split(',') if origin
+]
 
 CORS_ALLOW_CREDENTIALS = True
 
