@@ -13,6 +13,9 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5173,
+    // Acepta requests desde el contenedor nginx (cualquier IP de la red Docker).
+    // Sin esto, Vite rechaza el HMR con 403 porque la IP origen no es localhost.
+    allowedHosts: true,
     // HMR WebSocket: el browser conecta a ws://localhost/vite-hmr
     // Nginx hace el upgrade y lo reenvía al contenedor.
     hmr: {
